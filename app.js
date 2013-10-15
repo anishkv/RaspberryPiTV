@@ -4,22 +4,30 @@
 
 var express = require('express')
   , app = express()  
+  , consolidate = require('consolidate')
   , server = require('http').createServer(app)
   , path = require('path')
   , io = require('socket.io').listen(server)
   , spawn = require('child_process').spawn
-  , omx = require('omxcontrol');
+  , omx = require('omxcontrol')
+  , fs = require('fs')
+  ,parseString = require('xml2js').parseString;
 
 
 
 // all environments
 app.set('port', process.env.TEST_PORT || 8080);
+app.engine('html', consolidate.handlebars);
+app.set('view engine', 'html');
+app.set('views', __dirname + '/views');
 app.use(express.favicon());
 app.use(express.logger('dev'));
 app.use(express.bodyParser());
 app.use(express.methodOverride());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(omx());
+
+var $path = 'C:/movies/'
 
 // development only
 if ('development' == app.get('env')) {
@@ -39,6 +47,60 @@ app.get('/play/:video_id', function (req, res) {
 
 });
 
+app.get('/movies', function (req, res) {
+  fs.readdir($path, function(err, files){
+     return res.render('movies', {movies: files});  
+     //res.end();
+  })
+  
+});
+
+
+app.get('/poster/*', function (req, res) {
+  fs.readFile($path + req.params[0] + '/folder.jpg', function(err, data){
+    if(err) throw err;
+    res.end(data); 
+  });
+  
+});
+
+app.get('/fanart/*', function (req, res) {
+  
+  fs.readFile($path + req.params[0] + '/'+ req.params[0]  +'-fanart.jpg', function(err, data){
+    if(err) throw err;
+    res.end(data); 
+  });
+  
+});
+
+app.get('/movie-details/*', function (req, res) {
+  
+  fs.readFile($path + req.params[0] + '/' + req.params[0] + '.nfo', 'utf-8', function(err, data){
+    data = data.substring(1, data.length);
+    parseString(data, function (err, result) {
+      if(err) throw err;
+      return res.render('movie-details', {title: req.params[0], rating: result.movie.rating[0], year: result.movie.year[0], plot: result.movie.plot[0]});
+      console.dir(result);
+    });
+    
+    
+  });
+  
+});
+
+
+app.get('/play-movie/*', function (req, res) {
+  fs.readdir($path + req.params[0] , function(err, files){
+     for(i=0; i< files.length; i++) {
+      if(files[i].indexOf('.avi') > -1 || files[i].indexOf('.mp4') > -1 || files[i].indexOf('.mkv') > -1)  {
+        console.log(files[i])
+        console.log($path + req.params[0] + '/' + files[i])
+        omx.start($path + req.params[0] + '/' + files[i]);
+      }
+     }
+     //res.end();
+  })
+});
 
 //Socket.io Config
 io.set('log level', 1);
