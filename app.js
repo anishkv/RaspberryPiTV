@@ -27,7 +27,7 @@ app.use(express.methodOverride());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(omx());
 
-var $path = 'C:/movies/'
+var $path = '/media/5FF5-E1EB/movies/'
 
 // development only
 if ('development' == app.get('env')) {
@@ -148,6 +148,7 @@ io.sockets.on('connection', function (socket) {
           }
      }
      else if(data.action === "swipeRight"){
+	console.log(ss)
        if(ss != undefined){
            ss.emit("controlling", {action:"goRight"});
            }
